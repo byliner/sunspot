@@ -22,6 +22,29 @@ module SearchHelper
     response
   end
 
+  def stub_partial_results(*results)
+    count =
+      if results.last.is_a?(Integer) then results.pop
+      else results.length
+      end
+    docs = results.map do |result|
+      instance = result.delete('instance')
+      result.merge('id' => "#{instance.class.name} #{instance.id}")
+    end
+    response = {
+      'response' => {
+        'docs' => docs,
+        'numFound' => count
+      },
+      'responseHeader' => {
+        'partialResults' => true
+      }
+    }
+    connection.response = response
+    response
+  end
+
+
   def stub_results(*results)
     stub_full_results(
       *results.map do |result|

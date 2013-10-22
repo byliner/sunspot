@@ -8,7 +8,7 @@ module Sunspot
   # again here.
   #
   class Session
-    class <<self
+    class << self
       attr_writer :connection_class #:nodoc:
       
       # 
@@ -80,6 +80,29 @@ module Sunspot
     def more_like_this(object, *types, &block)
       mlt = new_more_like_this(object, *types, &block)
       mlt.execute
+    end
+
+    # 
+    # See Sunspot.new_retry_search
+    #
+    def new_retry_search(*types, &block)
+      types.flatten!
+      search = Search::RetrySearch.new(
+        connection,
+        setup_for_types(types),
+        Query::StandardQuery.new(types),
+        @config
+      )
+      search.build(&block) if block
+      search
+    end
+
+    #
+    # See Sunspot.retry_search
+    #
+    def retry_search(*types, &block)
+      search = new_retry_search(*types, &block)
+      search.execute
     end
 
     #

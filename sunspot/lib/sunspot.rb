@@ -47,7 +47,7 @@ module Sunspot
   # Used by, e.g., Sunspot::Rails for reindexing all searchable classes.
   @searchable = ClassSet.new
 
-  class <<self
+  class << self
     # 
     # Clients can inject a session proxy, allowing them to implement custom
     # session-management logic while retaining the Sunspot singleton API as
@@ -379,6 +379,86 @@ module Sunspot
     #
     def more_like_this(object, *types, &block)
       session.more_like_this(object, *types, &block)
+    end
+
+    def new_retry_search(*types, &block)
+      session.new_search(*types, &block)
+    end
+
+
+    # Search for objects in the index.  Will retry up to 3 times
+    # if solr returns the partialResults header
+    #
+    # ==== Parameters
+    #
+    # types<Class>...::
+    #   One or more types to search for. If no types are passed, all
+    #   configured types will be searched.
+    #
+    # ==== Returns
+    #
+    # Sunspot::RetrySearch:: Object containing results, facets, count, etc.
+    #
+    # The fields available for restriction, ordering, etc. are those that meet
+    # the following criteria:
+    #
+    # * They are not of type +text+.
+    # * They are defined for at least one of the classes being searched
+    # * They have the same data type for all of the classes being searched.
+    # * They have the same multiple flag for all of the classes being searched.
+    # * They have the same stored flag for all of the classes being searched.
+    #
+    # The restrictions available are the constants defined in the
+    # Sunspot::Restriction class. The standard restrictions are:
+    #
+    #   with(:field_name).equal_to(value)
+    #   with(:field_name, value) # shorthand for above
+    #   with(:field_name).less_than(value)
+    #   with(:field_name).greater_than(value)
+    #   with(:field_name).between(value1..value2)
+    #   with(:field_name).any_of([value1, value2, value3])
+    #   with(:field_name).all_of([value1, value2, value3])
+    #   without(some_instance) # exclude that particular instance
+    #
+    # +without+ can be substituted for +with+, causing the restriction to be
+    # negated. In the last example above, only +without+ works, as it does not
+    # make sense to search only for an instance you already have.
+    #
+    # Equality restrictions can take +nil+ as a value, which restricts the
+    # results to documents that have no value for the given field. Passing +nil+
+    # as a value to other restriction types is illegal. Thus:
+    #
+    #   with(:field_name, nil) # ok
+    #   with(:field_name).equal_to(nil) # ok
+    #   with(:field_name).less_than(nil) # bad
+    #
+    # ==== Example
+    #
+    #   Sunspot.retry_search(Post) do
+    #     keywords 'great pizza'
+    #     with(:published_at).less_than Time.now
+    #     with :blog_id, 1
+    #     without current_post
+    #     facet :category_ids
+    #     order_by :published_at, :desc
+    #     paginate 2, 15
+    #   end
+    #  
+    # If the block passed to #search takes an argument, that argument will
+    # present the DSL, and the block will be evaluated in the calling context.
+    # This will come in handy for building searches using instance data or
+    # methods, e.g.:
+    #
+    #   Sunspot.retry_search(Post) do |query|
+    #     query.with(:blog_id, @current_blog.id)
+    #   end
+    #
+    # See Sunspot::DSL::Search, Sunspot::DSL::Scope, Sunspot::DSL::FieldQuery
+    # and Sunspot::DSL::StandardQuery for the full API presented inside the
+    # block.
+    #
+    def retry_search(*types, &block)
+      session.retry_search(*types, &block)
     end
 
     # Remove objects from the index. Any time an object is destroyed, it must

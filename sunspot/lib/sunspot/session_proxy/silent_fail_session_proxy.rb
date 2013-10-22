@@ -8,6 +8,7 @@ module Sunspot
       
       delegate :new_search, :search, :config,
                 :new_more_like_this, :more_like_this,
+                :new_retry_search, :retry_search,
                 :delete_dirty, :delete_dirty?,
                 :to => :search_session
       

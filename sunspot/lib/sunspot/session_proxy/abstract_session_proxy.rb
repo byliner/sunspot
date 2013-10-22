@@ -1,7 +1,7 @@
 module Sunspot
   module SessionProxy
     class AbstractSessionProxy #:nodoc:
-      class <<self
+      class << self
         def delegate(*args)
           options = Util.extract_options_from(args)
           delegate = options[:to]
